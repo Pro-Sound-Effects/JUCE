@@ -196,6 +196,10 @@ public:
         if (alpha < 1.0f)
             setAlpha (alpha);
 
+        
+        // br: modification for pse
+        window.titlebarAppearsTransparent = YES;
+
         setTitle (component.getName());
 
         getNativeRealtimeModifiers = []
@@ -1277,6 +1281,11 @@ public:
         if ((flags & windowHasMinimiseButton) != 0)  style |= NSWindowStyleMaskMiniaturizable;
         if ((flags & windowHasCloseButton) != 0)     style |= NSWindowStyleMaskClosable;
         if ((flags & windowIsResizable) != 0)        style |= NSWindowStyleMaskResizable;
+
+        // br: mod for pse
+//        style |= NSFullSizeContentViewWindowMask;
+        style |= NSWindowStyleMaskFullSizeContentView;
+        
         return style;
     }
 
