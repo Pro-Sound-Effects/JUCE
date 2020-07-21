@@ -144,7 +144,7 @@ public:
 
             [window setExcludedFromWindowsMenu: (windowStyleFlags & windowIsTemporary) != 0];
             [window setIgnoresMouseEvents: (windowStyleFlags & windowIgnoresMouseClicks) != 0];
-
+            
            #if defined (MAC_OS_X_VERSION_10_7) && (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_7)
             if ((windowStyleFlags & (windowHasMaximiseButton | windowHasTitleBar)) == (windowHasMaximiseButton | windowHasTitleBar))
                 [window setCollectionBehavior: NSWindowCollectionBehaviorFullScreenPrimary];
@@ -183,6 +183,10 @@ public:
 
         if (alpha < 1.0f)
             setAlpha (alpha);
+
+        
+        // br: modification for pse
+        window.titlebarAppearsTransparent = YES;
 
         setTitle (component.getName());
 
@@ -1280,6 +1284,11 @@ public:
         if ((flags & windowHasMinimiseButton) != 0)  style |= NSWindowStyleMaskMiniaturizable;
         if ((flags & windowHasCloseButton) != 0)     style |= NSWindowStyleMaskClosable;
         if ((flags & windowIsResizable) != 0)        style |= NSWindowStyleMaskResizable;
+
+        // br: mod for pse
+//        style |= NSFullSizeContentViewWindowMask;
+        style |= NSWindowStyleMaskFullSizeContentView;
+        
         return style;
     }
 

@@ -194,6 +194,15 @@ public:
                                                 const StringPairArray& metadataValues,
                                                 int qualityOptionIndex);
 
+    // br: mod; making this a virtual function in AudioFormat, not just WavAudioFormat
+    virtual bool replaceMetadataInFile (const File& wavFile, const StringPairArray& newMetadata, AudioFormatReader::ChunkCollection* chunkCollection = nullptr) { jassert (false); return false; }
+
+    // br: mod
+    MemoryBlock createBWAVBlockFrom (const StringPairArray& values);
+    MemoryBlock createiXMLBlockFrom (const StringPairArray& values);
+    
+    
+    
 protected:
     /** Creates an AudioFormat object.
 

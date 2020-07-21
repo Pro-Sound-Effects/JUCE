@@ -241,6 +241,9 @@ public:
     */
     StringPairArray metadataValues;
 
+    /** ID3 Chunk */
+    MemoryBlock id3Data;
+    
     /** The input stream, for use by subclasses. */
     InputStream* input;
 
@@ -271,6 +274,9 @@ public:
                               int numSamples) = 0;
 
 
+    // br: mod
+    virtual void readWithChunkStorage (bool thumbnailOnly = false) { }
+    
 protected:
     //==============================================================================
     /** Used by AudioFormatReader subclasses to copy data to different formats. */
@@ -319,6 +325,125 @@ protected:
             numSamples = (int) samplesAvailable;
         }
     }
+
+    
+    
+    // BR: Mod vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+public:
+    
+    struct MetadataChunk
+    {
+        MetadataChunk()
+        {
+            
+        }
+        uint32 name = 0;
+        MemoryBlock data;
+        uint16 extraID3Flags = 0;       // Used only for ID3 subchunks
+        
+        static uint32 stringToCode (const String& s)
+        {
+            if (s.length() < 4)
+            {
+                jassert (false);
+                return 0;
+            }
+            
+            char c0 = s[0];
+            char c1 = s[1];
+            char c2 = s[2];
+            char c3 = s[3];
+            
+            uint32 u = (c3 << 24) | (c2 << 16) | (c1 << 8) | (c0);
+            return u;
+        }
+        
+        bool isMetadataChunk()
+        {
+            return (name != stringToCode ("fmt ")) && (name != stringToCode("data")) && (name != stringToCode("JUNK"));
+        }
+    };
+    
+    
+    int getNumChunks() const
+    {
+        return chunkCollection.storedChunks.size();
+    }
+    
+    uint32 getChunkName (int i) const
+    {
+        return chunkCollection.storedChunks[i]->name;
+    }
+    
+    uint32 getChunkSize (int i) const
+    {
+        return chunkCollection.storedChunks[i]->data.getSize();
+    }
+
+    MetadataChunk* getChunkAtIndex (int i)
+    {
+        if (i >= chunkCollection.storedChunks.size())
+        {
+            jassert (false);
+            return nullptr;
+        }
+        return chunkCollection.storedChunks[i].get();
+    }
+
+    
+    MetadataChunk* getOrCreateChunkWithName (int name)
+    {
+        return chunkCollection.getOrCreateChunkWithName (name);
+    }
+
+    struct ChunkCollection
+    {
+        ChunkCollection() { }
+        virtual ~ChunkCollection() { }
+
+        
+        Array<std::shared_ptr<MetadataChunk>> storedChunks;
+
+        MetadataChunk* getChunkWithName (uint32 name)
+        {
+            for (int i = 0; i < storedChunks.size(); ++i)
+            {
+                if (storedChunks[i]->name == name)
+                {
+                    return storedChunks[i].get();
+                }
+            }
+
+            return nullptr;
+        }
+
+        MetadataChunk* getOrCreateChunkWithName (uint32 name)
+        {
+            MetadataChunk* chunk = getChunkWithName (name);
+            if (chunk)
+            {
+                return chunk;
+            }
+            
+            // Create a new entry
+            std::shared_ptr<MetadataChunk> entry;
+            entry.reset (new MetadataChunk());
+            entry->name = name;
+            storedChunks.add (entry);
+            return entry.get();
+        }
+
+    };
+    
+    ChunkCollection* getChunkCollection()
+    {
+        return &chunkCollection;
+    }
+
+    protected:
+    ChunkCollection chunkCollection;
+    
+    // end BR mod ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 private:
     String formatName;

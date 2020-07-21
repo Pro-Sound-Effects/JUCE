@@ -211,23 +211,15 @@ public:
                                         const StringPairArray& metadataValues,
                                         int qualityOptionIndex) override;
 
-    AudioFormatWriter* createWriterFor (OutputStream* streamToWriteTo,
-                                        double sampleRateToUse,
-                                        const AudioChannelSet& channelLayout,
-                                        int bitsPerSample,
-                                        const StringPairArray& metadataValues,
-                                        int qualityOptionIndex, AudioFormatReader::ChunkCollection* chunkCollection);
-    
     //==============================================================================
     /** Utility function to replace the metadata in a wav file with a new set of values.
 
         If possible, this cheats by overwriting just the metadata region of the file, rather
         than by copying the whole file again.
     */
-    bool replaceMetadataInFile (const File& wavFile, const StringPairArray& newMetadata, AudioFormatReader::ChunkCollection* chunkCollection = nullptr) override;
+    bool replaceMetadataInFile (const File& wavFile, const StringPairArray& newMetadata);
 
 
-    
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (WavAudioFormat)
 };

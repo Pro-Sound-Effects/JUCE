@@ -386,6 +386,20 @@ public:
     AiffAudioFormatReader (InputStream* in)
         : AudioFormatReader (in, aiffFormatName)
     {
+        doRead (in, false);
+    }
+    
+    virtual void readWithChunkStorage (bool thumbnailOnly_) override
+    {
+        thumbnailOnly = thumbnailOnly_;
+        input->setPosition (0);
+        doRead (input, true);
+    }
+    
+    void doRead (InputStream* in, bool storeChunks)
+    {
+        
+        
         using namespace AiffFileHelpers;
 
         if (input->readInt() == chunkName ("FORM"))
@@ -406,6 +420,19 @@ public:
                     auto length = (uint32) input->readIntBigEndian();
                     auto chunkEnd = input->getPosition() + length;
 
+                    
+                    if (!thumbnailOnly && storeChunks)
+                    {
+                        // BR: MOD vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
+                        MetadataChunk* chunk = chunkCollection.getOrCreateChunkWithName (type);
+                        // Copy the chunk into a memory block
+                        int64 chunkStart = input->getPosition();
+                        input->readIntoMemoryBlock (chunk->data, (ssize_t) length);
+                        input->setPosition (chunkStart);
+                        // end br: mod
+                    }
+
+                    
                     if (type == chunkName ("FVER"))
                     {
                         hasGotVer = true;
@@ -532,6 +559,16 @@ public:
                         input->read (inst, (int) length);
                         inst->copyTo (metadataValues);
                     }
+                    else if (type == chunkName ("iXML"))
+                    {
+                        MemoryBlock mb;
+                        input->readIntoMemoryBlock (mb, (ssize_t) length);
+                        if (mb.getData())
+                        {
+                            String s = String::createStringFromData (mb.getData(), mb.getSize());
+                            metadataValues.set ("iXML", s);
+                        }
+                    }
                     else if (type == chunkName ("basc"))
                     {
                         AiffFileHelpers::BASCChunk (*input).addToMetadata (metadataValues);
@@ -547,7 +584,11 @@ public:
                     {
                         break;
                     }
-
+                    else if (type == chunkName ("bext") || type == chunkName ("BEXT"))
+                    {
+                        jassert (false);
+                    }
+                    
                     input->setPosition (chunkEnd + (chunkEnd & 1)); // (chunks should be aligned to an even byte address)
                 }
             }
@@ -621,6 +662,9 @@ public:
     bool littleEndian;
 
 private:
+    
+    bool thumbnailOnly = false;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AiffAudioFormatReader)
 };
 
@@ -630,8 +674,9 @@ class AiffAudioFormatWriter  : public AudioFormatWriter
 public:
     AiffAudioFormatWriter (OutputStream* out, double rate,
                            unsigned int numChans, unsigned int bits,
-                           const StringPairArray& metadataValues)
-        : AudioFormatWriter (out, aiffFormatName, rate, numChans, bits)
+                           const StringPairArray& metadataValues, AudioFormatReader::ChunkCollection* chunkCollection_ = nullptr)
+        : AudioFormatWriter (out, aiffFormatName, rate, numChans, bits),
+            chunkCollection(chunkCollection_)
     {
         using namespace AiffFileHelpers;
 
@@ -648,7 +693,7 @@ public:
         }
 
         headerPosition = out->getPosition();
-        writeHeader();
+        writeHeader (chunkCollection);
     }
 
     ~AiffAudioFormatWriter() override
@@ -702,7 +747,10 @@ private:
     int64 headerPosition = 0;
     bool writeFailed = false;
 
-    void writeHeader()
+    // br: mod line below
+    AudioFormatReader::ChunkCollection* chunkCollection;
+    
+    void writeHeader( AudioFormatReader::ChunkCollection* chunkCollection_ = nullptr)
     {
         using namespace AiffFileHelpers;
 
@@ -712,12 +760,59 @@ private:
         // if this fails, you've given it an output stream that can't seek! It needs
         // to be able to seek back to write the header
         jassert (couldSeekOk);
+        
+        auto audioBytes = (int) (lengthInSamples * ((bitsPerSample * numChannels) / 8));
+        audioBytes += (audioBytes & 1);
 
+        // br: mod
+        if (!chunkCollection)
+        {
+            jassert (false);
+            return;
+            
+        }
+
+        
+        
+        // BR: mod note, we need to ensure we have the required SSND chunk
+        AiffAudioFormatReader::MetadataChunk* chunk = chunkCollection->getOrCreateChunkWithName (1145983827);
+        
+        MemoryOutputStream stream;
+        stream.writeIntBigEndian (audioBytes + 8);
+        stream.writeInt (0);
+        stream.writeInt (0);
+        chunk->data = stream.getMemoryBlock();
+        
+        // BR: mod
+        int64 total = 0;
+        for (int i = 0; i < chunkCollection->storedChunks.size(); ++i)
+        {
+            int name = chunkCollection->storedChunks[i]->name;
+            int size = chunkCollection->storedChunks[i]->data.getSize();
+            if (name == chunkName ("SSND"))
+            {
+                continue;
+            }
+            
+            size += (size & 1);
+            
+            if (size > 0)
+            {
+                total += size + 8;
+            }
+        }
+        
+        auto headerLen = (int) (54 + total);
+
+        
+        
+
+        
+        /*
         auto headerLen = (int) (54 + (markChunk.getSize() > 0 ? markChunk.getSize() + 8 : 0)
                                    + (comtChunk.getSize() > 0 ? comtChunk.getSize() + 8 : 0)
                                    + (instChunk.getSize() > 0 ? instChunk.getSize() + 8 : 0));
-        auto audioBytes = (int) (lengthInSamples * ((bitsPerSample * numChannels) / 8));
-        audioBytes += (audioBytes & 1);
+        */
 
         output->writeInt (chunkName ("FORM"));
         output->writeIntBigEndian (headerLen + audioBytes - 8);
@@ -771,6 +866,41 @@ private:
 
         output->write (sampleRateBytes, 10);
 
+        //jassert (output->getPosition() == 54);//heresWhereiWritethechunks;
+
+        for (int i = 0; i < chunkCollection->storedChunks.size(); ++i)
+        {
+
+            AudioFormatReader::MetadataChunk* chunk = chunkCollection->storedChunks[i].get();
+            if (!chunk->isMetadataChunk())
+            {
+                continue;
+            }
+            if (chunk->name == 1145983827)
+            {
+                continue;
+            }
+            if (chunk->data.getSize() & 1)
+            {
+                char z = 0;
+                chunk->data.append (&z, 1);
+            }
+            
+            
+            if (chunk->data.getSize() > 0)
+            {
+                output->writeInt (chunk->name);
+                output->writeIntBigEndian (chunk->data.getSize());
+                *output << chunk->data;
+            }
+        }
+        
+        output->writeInt (chunkName ("SSND"));
+        output->writeIntBigEndian (audioBytes + 8);
+        output->writeInt (0);
+        output->writeInt (0);
+        
+        /*
         if (markChunk.getSize() > 0)
         {
             output->writeInt (chunkName ("MARK"));
@@ -796,7 +926,7 @@ private:
         output->writeIntBigEndian (audioBytes + 8);
         output->writeInt (0);
         output->writeInt (0);
-
+*/
         jassert (output->getPosition() == headerLen);
     }
 
@@ -1003,4 +1133,115 @@ AudioFormatWriter* AiffAudioFormat::createWriterFor (OutputStream* out,
     return nullptr;
 }
 
+// br: mod added this function
+    AudioFormatWriter* AiffAudioFormat::createWriterFor (OutputStream* streamToWriteTo,
+                                    double sampleRateToUse,
+                                    unsigned int numberOfChannels,
+                                    int bitsPerSample,
+                                    const StringPairArray& metadataValues,
+                                    int qualityOptionIndex, AudioFormatReader::ChunkCollection* chunkCollection)
+{
+        
+    return new AiffAudioFormatWriter (streamToWriteTo, sampleRateToUse, numberOfChannels,
+                                      (unsigned int) bitsPerSample, metadataValues, chunkCollection);
+
+    /*
+    if (out != nullptr && getPossibleBitDepths().contains (bitsPerSample) && isChannelLayoutSupported (channelLayout))
+        return new AiffAudioFormatWriter (out, sampleRate, channelLayout,
+                                         (unsigned int) bitsPerSample, metadataValues, chunkCollection);
+*/
+    return nullptr;
+}
+
+namespace AiffFileHelpers
+{
+    static bool slowCopyAiffFileWithNewMetadata (const File& file, const StringPairArray& metadata, AudioFormatReader::ChunkCollection* chunkCollection = nullptr)
+    {
+        
+        TemporaryFile tempFile (file);
+        AiffAudioFormat aiff;
+        
+        std::unique_ptr<AudioFormatReader> reader (aiff.createReaderFor (file.createInputStream(), true));
+        
+        if (reader != nullptr)
+        {
+            std::unique_ptr<OutputStream> outStream (tempFile.getFile().createOutputStream());
+            
+            if (outStream != nullptr)
+            {
+                
+                // br: mod vvvvvvvvvvvvvvv
+                
+                std::unique_ptr<AudioFormatWriter> writer (aiff.createWriterFor (outStream.get(), reader->sampleRate, reader->numChannels, (int) reader->bitsPerSample,
+                                                                                metadata, 0, chunkCollection));
+                
+                /*
+                 std::unique_ptr<AudioFormatWriter> writer (wav.createWriterFor (outStream.get(), reader->sampleRate,
+                 reader->numChannels, (int) reader->bitsPerSample,
+                 metadata, 0, chunkCollection));
+                 */
+                if (writer != nullptr)
+                {
+                    outStream.release();
+                    
+                    bool ok = writer->writeFromAudioReader (*reader, 0, -1);
+                    writer.reset();
+                    reader.reset();
+                    
+                    return ok && tempFile.overwriteTargetFileWithTemporary();
+                }
+            }
+        }
+        
+        
+        return false;
+    }
+}
+
+bool AiffAudioFormat::replaceMetadataInFile (const File& wavFile, const StringPairArray& newMetadata, AudioFormatReader::ChunkCollection* chunkCollection)
+{
+    
+    using namespace AiffFileHelpers;
+    
+    // br: mod
+    /*
+     
+     std::unique_ptr<WavAudioFormatReader> reader (static_cast<WavAudioFormatReader*> (createReaderFor (wavFile.createInputStream(), true)));
+     
+     if (reader != nullptr)
+     {
+     auto bwavPos  = reader->bwavChunkStart;
+     auto bwavSize = reader->bwavSize;
+     reader.reset();
+     
+     if (bwavSize > 0)
+     {
+     auto chunk = BWAVChunk::createFrom (newMetadata);
+     
+     if (chunk.getSize() <= (size_t) bwavSize)
+     {
+     // the new one will fit in the space available, so write it directly..
+     auto oldSize = wavFile.getSize();
+     
+     {
+     FileOutputStream out (wavFile);
+     
+     if (out.openedOk())
+     {
+     out.setPosition (bwavPos);
+     out << chunk;
+     out.setPosition (oldSize);
+     }
+     }
+     
+     jassert (wavFile.getSize() == oldSize);
+     return true;
+     }
+     }
+     }
+     */
+    return slowCopyAiffFileWithNewMetadata (wavFile, newMetadata, chunkCollection);
+}
+
+    
 } // namespace juce

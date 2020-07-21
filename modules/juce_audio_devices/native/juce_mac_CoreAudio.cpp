@@ -2185,7 +2185,8 @@ public:
         if (out == nullptr)  return in.release();
 
         std::unique_ptr<AudioIODeviceCombiner> combo (new AudioIODeviceCombiner (combinedName, this));
-        combo->addDevice (in.release(),  true, false);
+        // Pro Sound Effects Modified: Don't add the input, as this prompts for microphone permission
+//        combo->addDevice (in.release(),  true, false);
         combo->addDevice (out.release(), false, true);
         return combo.release();
     }

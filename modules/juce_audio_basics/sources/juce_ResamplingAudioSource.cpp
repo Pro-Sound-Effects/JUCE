@@ -82,6 +82,24 @@ void ResamplingAudioSource::releaseResources()
 
 void ResamplingAudioSource::getNextAudioBlock (const AudioSourceChannelInfo& info)
 {
+
+#if 0
+    // For temporarily disabling
+    AudioSourceChannelInfo readInfo (&buffer, 0, info.numSamples);
+    input->getNextAudioBlock (readInfo);
+
+    for (int i = 0; i < info.buffer->getNumChannels(); ++i)
+    {
+        if (i >= readInfo.buffer->getNumChannels())
+        {
+            break;
+        }
+        info.buffer->copyFrom (i, info.startSample, readInfo.buffer->getReadPointer (i), info.numSamples);
+    }
+    
+    return;
+#endif
+    
     double localRatio;
 
     {
