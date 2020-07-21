@@ -75,8 +75,8 @@ MouseCursor ResizableBorderComponent::Zone::getMouseCursor() const noexcept
         case (left | top):      mc = MouseCursor::TopLeftCornerResizeCursor; break;
         case top:               mc = MouseCursor::TopEdgeResizeCursor; break;
         case (right | top):     mc = MouseCursor::TopRightCornerResizeCursor; break;
-        case left:              mc = MouseCursor::LeftEdgeResizeCursor; break;
-        case right:             mc = MouseCursor::RightEdgeResizeCursor; break;
+        case left:              mc = MouseCursor::LeftRightResizeCursor; break;
+        case right:             mc = MouseCursor::LeftRightResizeCursor; break;
         case (left | bottom):   mc = MouseCursor::BottomLeftCornerResizeCursor; break;
         case bottom:            mc = MouseCursor::BottomEdgeResizeCursor; break;
         case (right | bottom):  mc = MouseCursor::BottomRightCornerResizeCursor; break;

@@ -23,6 +23,9 @@
   ==============================================================================
 */
 
+// br: mod, separated the helpers into a header file
+#include "juce_audio_formats/codecs/juce_AudioFormatFileHelpers.h"
+
 namespace juce
 {
 
@@ -87,5 +90,20 @@ AudioFormatWriter* AudioFormat::createWriterFor (OutputStream* streamToWriteTo,
 
     return nullptr;
 }
+
+
+
+// br: mod
+MemoryBlock AudioFormat::createBWAVBlockFrom (const StringPairArray& values)
+{
+    return WavFileHelpers::BWAVChunk::createFrom (values);
+}
+
+MemoryBlock AudioFormat::createiXMLBlockFrom (const StringPairArray& values)
+{
+    return WavFileHelpers::iXMLChunk::createFrom (values);
+}
+// end mod
+
 
 } // namespace juce

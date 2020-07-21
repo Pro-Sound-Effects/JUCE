@@ -87,6 +87,18 @@ public:
                                         int qualityOptionIndex) override;
     using AudioFormat::createWriterFor;
 
+    AudioFormatWriter* createWriterFor (OutputStream* streamToWriteTo,
+                                        double sampleRateToUse,
+                                        unsigned int numberOfChannels,
+                                        int bitsPerSample,
+                                        const StringPairArray& metadataValues,
+                                        int qualityOptionIndex, AudioFormatReader::ChunkCollection* chunkCollection);
+
+
+    // br: mod
+    bool replaceMetadataInFile (const File& wavFile, const StringPairArray& newMetadata, AudioFormatReader::ChunkCollection* chunkCollection = nullptr) override;
+
+
 private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(AiffAudioFormat)
 };
