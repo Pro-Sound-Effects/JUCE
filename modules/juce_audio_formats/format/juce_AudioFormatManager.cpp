@@ -64,13 +64,18 @@ void AudioFormatManager::registerBasicFormats()
     registerFormat (new OggVorbisAudioFormat(), false);
    #endif
 
+    // BR: MODIFICATION so that MP3 will be tried before CoreAudio
+#if JUCE_USE_MP3AUDIOFORMAT
+    registerFormat (new MP3AudioFormat(), false);
+#endif
+    
    #if JUCE_MAC || JUCE_IOS
     registerFormat (new CoreAudioFormat(), false);
    #endif
 
-   #if JUCE_USE_MP3AUDIOFORMAT
-    registerFormat (new MP3AudioFormat(), false);
-   #endif
+//   #if JUCE_USE_MP3AUDIOFORMAT
+//    registerFormat (new MP3AudioFormat(), false);
+//   #endif
 
    #if JUCE_USE_WINDOWS_MEDIA_FORMAT
     registerFormat (new WindowsMediaAudioFormat(), false);

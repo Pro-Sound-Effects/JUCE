@@ -2203,7 +2203,7 @@ public:
         if (out == nullptr)  return in.release();
 
         auto combo = std::make_unique<AudioIODeviceCombiner> (combinedName, this);
-        combo->addDevice (std::move (in),  true, false);
+        //combo->addDevice (std::move (in),  true, false);
         combo->addDevice (std::move (out), false, true);
         return combo.release();
     }
