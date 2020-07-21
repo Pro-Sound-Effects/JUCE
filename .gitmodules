@@ -1,0 +1,3 @@
+[submodule "modules/ff_meters"]
+	path = modules/ff_meters
+	url = https://github.com/Pro-Sound-Effects/ff_meters
