@@ -122,6 +122,30 @@ public:
 
     void updateTopLevelMenu (NSMenuItem* parentItem, const PopupMenu& menuToCopy, const String& name, int menuId, int topLevelIndex)
     {
+        // br: mod
+        /*
+         See:
+         https://forum.juce.com/t/nsmenudelegate-menuneedsupdate/21319
+         */
+        
+        
+        // Note: This method used to update the contents of the existing menu in-place, but that caused
+        // weird side-effects which messed-up keyboard focus when switching between windows. By creating
+        // a new menu and replacing the old one with it, that problem seems to be avoided..
+        
+        //ORIGINAL JUCE CODE: NSMenu* menu = [[NSMenu alloc] initWithTitle: juceStringToNS (name)];
+        NSMenu* menu = createMenu (menuToCopy, name, menuId, topLevelIndex, true);
+        
+        //for (PopupMenu::MenuItemIterator iter (menuToCopy); iter.next();)
+        //    addMenuItem (iter, menu, menuId, topLevelIndex);
+        
+        [menu setAutoenablesItems: false];
+        [menu update];
+        [parentItem setSubmenu: menu];
+        [menu release];
+     
+        // Old code below
+#if 0
         // Note: This method used to update the contents of the existing menu in-place, but that caused
         // weird side-effects which messed-up keyboard focus when switching between windows. By creating
         // a new menu and replacing the old one with it, that problem seems to be avoided..
@@ -137,6 +161,7 @@ public:
         [parentItem setSubmenu: menu];
 
         [menu release];
+#endif
     }
 
     void updateTopLevelMenu (NSMenu* menu)

@@ -176,7 +176,12 @@ public:
     {
         lengthInSamples = 0;
         decoder = FlacNamespace::FLAC__stream_decoder_new();
+        
+        // br: modification
+        FLAC__stream_decoder_set_metadata_respond_all (decoder);
 
+        
+        
         ok = FLAC__stream_decoder_init_stream (decoder,
                                                readCallback_, seekCallback_, tellCallback_, lengthCallback_,
                                                eofCallback_, writeCallback_, metadataCallback_, errorCallback_,
@@ -209,12 +214,16 @@ public:
 
     void useMetadata (const FlacNamespace::FLAC__StreamMetadata_StreamInfo& info)
     {
-        sampleRate = info.sample_rate;
-        bitsPerSample = info.bits_per_sample;
-        lengthInSamples = (unsigned int) info.total_samples;
-        numChannels = info.channels;
-
-        reservoir.setSize ((int) numChannels, 2 * (int) info.max_blocksize, false, false, true);
+        // br: mod, since sometimes this is reported a second time with sample rate of zero
+        if (sampleRate == 0 && info.sample_rate != 0)
+        {
+            sampleRate = info.sample_rate;
+            bitsPerSample = info.bits_per_sample;
+            lengthInSamples = (unsigned int) info.total_samples;
+            numChannels = info.channels;
+            
+            reservoir.setSize ((int) numChannels, 2 * (int) info.max_blocksize, false, false, true);
+        }
     }
 
     // returns the number of samples read
