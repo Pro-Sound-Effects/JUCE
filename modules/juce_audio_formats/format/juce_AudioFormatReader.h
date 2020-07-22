@@ -353,10 +353,10 @@ public:
                 return 0;
             }
             
-            char c0 = s[0];
-            char c1 = s[1];
-            char c2 = s[2];
-            char c3 = s[3];
+            char c0 = (char) s[0];
+            char c1 = (char) s[1];
+            char c2 = (char) s[2];
+            char c3 = (char) s[3];
             
             uint32 u = (c3 << 24) | (c2 << 16) | (c1 << 8) | (c0);
             return u;
@@ -381,7 +381,7 @@ public:
     
     uint32 getChunkSize (int i) const
     {
-        return chunkCollection.storedChunks[i]->data.getSize();
+        return (uint32_t) (chunkCollection.storedChunks[i]->data.getSize());
     }
 
     MetadataChunk* getChunkAtIndex (int i)
