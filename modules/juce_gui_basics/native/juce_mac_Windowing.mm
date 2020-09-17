@@ -200,9 +200,9 @@ struct NSDraggingSourceHelper   : public ObjCClass<NSObject<NSDraggingSource>>
         object_setInstanceVariable (self, "text", new String (text));
     }
 
-    static void setCompletionCallback (id self, std::function<void()> cb)
+    static void setCompletionCallback (id self, std::function<void(DragAndDropContainer::DragFilesResult)> cb) // PSE
     {
-        object_setInstanceVariable (self, "callback", new std::function<void()> (cb));
+        object_setInstanceVariable (self, "callback", new std::function<void(DragAndDropContainer::DragFilesResult)> (cb)); // PSE
     }
 
     static void setDragOperation (id self, NSDragOperation op)
@@ -233,7 +233,7 @@ private:
         return *getIvar<NSDragOperation*> (self, "operation");
     }
 
-    static void draggingSessionEnded (id self, SEL, NSDraggingSession*, NSPoint p, NSDragOperation)
+    static void draggingSessionEnded (id self, SEL, NSDraggingSession*, NSPoint p, NSDragOperation op) // PSE use NSDragOperation op
     {
         // Our view doesn't receive a mouse up when the drag ends so we need to generate one here and send it...
         if (auto* view = getNSViewForDragEvent (nullptr))
@@ -241,8 +241,14 @@ private:
                 if (id e = [NSEvent eventWithCGEvent: cgEvent])
                     [view mouseUp: e];
 
-        if (auto* cb = getIvar<std::function<void()>*> (self, "callback"))
-            cb->operator()();
+        // PSE
+        DragAndDropContainer::DragFilesResult r =
+            (op == NSDragOperationCopy) ? DragAndDropContainer::Copied :
+            (op == NSDragOperationMove) ? DragAndDropContainer::Moved :
+            DragAndDropContainer::Canceled;
+        if (auto* cb = getIvar<std::function<void(DragAndDropContainer::DragFilesResult)>*> (self, "callback"))
+            cb->operator()(r);
+        // PSE
     }
 };
 
@@ -265,7 +271,7 @@ bool DragAndDropContainer::performExternalDragDropOfText (const String& text, Co
                 NSDraggingSourceHelper::setDragOperation (helper, NSDragOperationCopy);
 
                 if (callback != nullptr)
-                    NSDraggingSourceHelper::setCompletionCallback (helper, callback);
+                    NSDraggingSourceHelper::setCompletionCallback (helper, [callback](DragAndDropContainer::DragFilesResult) { callback(); }); // PSE
 
                 auto pasteboardItem = [[NSPasteboardItem new] autorelease];
                 [pasteboardItem setDataProvider: helper
@@ -293,7 +299,7 @@ bool DragAndDropContainer::performExternalDragDropOfText (const String& text, Co
 }
 
 bool DragAndDropContainer::performExternalDragDropOfFiles (const StringArray& files, bool canMoveFiles,
-                                                           Component* sourceComponent, std::function<void()> callback)
+                                                           Component* sourceComponent, std::function<void(DragAndDropContainer::DragFilesResult)> callback) // PSE
 {
     if (files.isEmpty())
         return false;

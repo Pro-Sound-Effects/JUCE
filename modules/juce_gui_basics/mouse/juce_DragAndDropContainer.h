@@ -50,6 +50,18 @@ namespace juce
 class JUCE_API  DragAndDropContainer
 {
 public:
+    // PSE
+    /** Denotes the result of a drag/drop operation.
+
+        The object that derives from this class must also be a Component.
+    */
+    enum DragFilesResult {
+        Canceled,
+        Copied,
+        Moved
+    };
+    // PSE
+
     //==============================================================================
     /** Creates a DragAndDropContainer.
 
@@ -151,6 +163,8 @@ public:
     static DragAndDropContainer* findParentDragContainerFor (Component* childComponent);
 
 
+    // PSE
+    // Adding a DragFilesResult
     //==============================================================================
     /** This performs an asynchronous drag-and-drop of a set of files to some external
         application.
@@ -172,7 +186,8 @@ public:
     */
     static bool performExternalDragDropOfFiles (const StringArray& files, bool canMoveFiles,
                                                 Component* sourceComponent = nullptr,
-                                                std::function<void()> callback = nullptr);
+                                                std::function<void (DragFilesResult)> callback = nullptr);
+    // PSE
 
     /** This performs an asynchronous drag-and-drop of a block of text to some external
         application.

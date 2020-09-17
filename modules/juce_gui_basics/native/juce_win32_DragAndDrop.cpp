@@ -241,7 +241,7 @@ namespace DragAndDropHelpers
 
     struct DragAndDropJob   : public ThreadPoolJob
     {
-        DragAndDropJob (FORMATETC f, STGMEDIUM m, DWORD d, std::function<void()>&& cb)
+        DragAndDropJob (FORMATETC f, STGMEDIUM m, DWORD d, std::function<void(DragAndDropContainer::DragFilesResult)>&& cb) // PSE
             : ThreadPoolJob ("DragAndDrop"),
               format (f), medium (m), whatToDo (d),
               completionCallback (std::move (cb))
@@ -263,8 +263,19 @@ namespace DragAndDropHelpers
 
             OleUninitialize();
 
+            // PSE
+            // I'm capturing the result in a lambda
+            // so it can be passed to MessageManager::callAsync
+            auto callback = completionCallback;
+            DragAndDropContainer::DragFilesResult r = 
+                (effect == DROPEFFECT_MOVE) ? DragAndDropContainer::Moved :
+                (effect == DROPEFFECT_COPY) ? DragAndDropContainer::Copied : 
+                DragAndDropContainer::Canceled;
+            auto callbackWithResult = [callback, r]() { callback (r); };
+
             if (completionCallback != nullptr)
-                MessageManager::callAsync (std::move (completionCallback));
+                MessageManager::callAsync (std::move (callbackWithResult));
+            // PSE
 
             return jobHasFinished;
         }
@@ -273,7 +284,7 @@ namespace DragAndDropHelpers
         STGMEDIUM medium;
         DWORD whatToDo;
 
-        std::function<void()> completionCallback;
+        std::function<void(DragAndDropContainer::DragFilesResult)> completionCallback; // PSE
     };
 
     class ThreadPoolHolder   : private DeletedAtShutdown
@@ -302,7 +313,7 @@ namespace DragAndDropHelpers
 
 //==============================================================================
 bool DragAndDropContainer::performExternalDragDropOfFiles (const StringArray& files, const bool canMove,
-                                                           Component*, std::function<void()> callback)
+                                                           Component*, std::function<void(DragFilesResult)> callback) // PSE
 {
     if (files.isEmpty())
         return false;
@@ -343,7 +354,7 @@ bool DragAndDropContainer::performExternalDragDropOfText (const String& text, Co
     pool.addJob (new DragAndDropHelpers::DragAndDropJob (format,
                                                         medium,
                                                         DROPEFFECT_COPY | DROPEFFECT_MOVE,
-                                                        std::move (callback)),
+                                                        [callback](DragFilesResult) { callback(); }), // PSE
                  true);
 
     return true;
