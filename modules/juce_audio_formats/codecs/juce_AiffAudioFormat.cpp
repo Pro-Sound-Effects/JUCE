@@ -1163,7 +1163,7 @@ namespace AiffFileHelpers
         TemporaryFile tempFile (file);
         AiffAudioFormat aiff;
         
-        std::unique_ptr<AudioFormatReader> reader (aiff.createReaderFor (file.createInputStream(), true));
+        std::unique_ptr<AudioFormatReader> reader (aiff.createReaderFor (file.createInputStream().get(), true)); //JOHN check this works JUCE 6
         
         if (reader != nullptr)
         {
