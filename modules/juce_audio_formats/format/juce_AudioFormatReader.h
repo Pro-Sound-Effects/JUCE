@@ -273,8 +273,10 @@ public:
                               int numSamples) = 0;
 
 
-    // br: mod
+    // ===== PSE
     virtual void readWithChunkStorage (bool thumbnailOnly = false) { }
+    virtual void setLengthInSamples(uint32 length) {}
+    // ===== PSE
     
 protected:
     //==============================================================================
