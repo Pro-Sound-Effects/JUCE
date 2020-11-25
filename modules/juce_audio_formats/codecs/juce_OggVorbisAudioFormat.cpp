@@ -256,6 +256,15 @@ public:
     {
         return (long) static_cast<InputStream*> (datasource)->getPosition();
     }
+    
+    // ======== PSE
+    virtual void setLengthInSamples(uint32 length) override
+    {
+        lengthInSamples = length;
+        ovFile.pcmlengths[0] = 0;
+        ovFile.pcmlengths[1] = (OggVorbisNamespace::ogg_int64_t)length;
+    }
+    // ======== End PSE
 
 private:
     OggVorbisNamespace::OggVorbis_File ovFile;
