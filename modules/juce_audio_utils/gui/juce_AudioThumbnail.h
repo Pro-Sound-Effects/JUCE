@@ -189,6 +189,9 @@ public:
 
     /** Returns the hash code that was set by setSource() or setReader(). */
     int64 getHashCode() const override;
+    
+    // PSE
+    void setFileStreamProgress(double progress);
 
 private:
     //==============================================================================
@@ -216,6 +219,9 @@ private:
     void setLevels (const MinMaxValue* const* values, int thumbIndex, int numChans, int numValues);
     void createChannels (int length);
 
+    // PSE
+    std::atomic<double> fileStreamProgress { 0 };
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (AudioThumbnail)
 };
 

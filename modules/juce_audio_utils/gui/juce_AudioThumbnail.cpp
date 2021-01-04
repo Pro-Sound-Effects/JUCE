@@ -202,6 +202,13 @@ public:
     {
         return (int) (originalSample / owner.samplesPerThumbSample);
     }
+    
+    // PSE
+    void setFileStreamProgress(double progress)
+    {
+        fileStreamProgress.store(progress);
+    }
+    //
 
     int64 lengthInSamples = 0, numSamplesFinished = 0;
     double sampleRate = 0;
@@ -214,7 +221,11 @@ private:
     std::unique_ptr<AudioFormatReader> reader;
     CriticalSection readerLock;
     std::atomic<uint32> lastReaderUseTime { 0 };
-
+    
+    // PSE
+    std::atomic<double> fileStreamProgress { 0 };
+    //
+    
     void createReader()
     {
         if (reader == nullptr && source != nullptr)
@@ -230,6 +241,14 @@ private:
         {
             auto numToDo = (int) jmin (256 * (int64) owner.samplesPerThumbSample, lengthInSamples - numSamplesFinished);
 
+            // PSE
+            // if numSamplesFinished + numToDo > progressInSamples, then not all downloads
+            if ((numSamplesFinished + numToDo) > floor(lengthInSamples * fileStreamProgress.load()))
+            {
+                return isFullyLoaded();
+            }
+            //
+            
             if (numToDo > 0)
             {
                 auto startSample = numSamplesFinished;
@@ -823,4 +842,11 @@ void AudioThumbnail::drawChannels (Graphics& g, const Rectangle<int>& area, doub
     }
 }
 
+// PSE
+void AudioThumbnail::setFileStreamProgress(double progress)
+{
+    fileStreamProgress.store(progress);
+    source->setFileStreamProgress(progress);
+}
+//
 } // namespace juce
