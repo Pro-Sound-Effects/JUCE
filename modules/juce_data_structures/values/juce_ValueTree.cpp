@@ -571,7 +571,9 @@ public:
     SortedSet<ValueTree*> valueTreesWithListeners;
     SharedObject* parent = nullptr;
 
-    JUCE_LEAK_DETECTOR (SharedObject)
+//    JUCE_LEAK_DETECTOR (SharedObject)
+    JUCE_HEAVYWEIGHT_LEAK_DETECTOR (SharedObject)
+
 };
 
 //==============================================================================
