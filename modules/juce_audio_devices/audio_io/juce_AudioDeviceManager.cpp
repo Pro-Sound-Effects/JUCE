@@ -1173,7 +1173,7 @@ void AudioDeviceManager::playTestSound()
         auto soundLength = (int) sampleRate;
 
         double frequency = 440.0;
-        float amplitude = 0.5f;
+        float amplitude = 0.25f;
 
         auto phasePerSample = MathConstants<double>::twoPi / (sampleRate / frequency);
 
