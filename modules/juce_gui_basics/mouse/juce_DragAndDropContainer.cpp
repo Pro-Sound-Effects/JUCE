@@ -32,7 +32,9 @@ bool juce_performDragDropText (const String&, bool& shouldStop);
 
 //==============================================================================
 class DragAndDropContainer::DragImageComponent  : public Component,
-                                                  private Timer
+                                                  private Timer,
+                                                  public KeyListener
+
 {
 public:
     DragImageComponent (const ScaledImage& im,
@@ -54,6 +56,31 @@ public:
         if (mouseDragSource == nullptr)
             mouseDragSource = sourceComponent;
 
+        // dd: while the DragImageComponent does have
+        // a keyPressed callback to dismiss the DnD operation,
+        // it will never get called unless it is set to always 
+        // grab the keyboard focus, but that would prevent the 
+        // DnD source/targets from implementing their own 
+        // KeyListeners for modifiers and escapeKey.
+        // A better solution is to ensure the source component
+        // (the one being dragged) has keyboard focus (during
+        // the drag) so that DnDTargets can register KeyListener
+        // with the source to handle any modifiers/escapeKey.
+        // Nothing special needs to happen with any DragAndDropTargets
+        // in order for the escapeKey to behave properly.
+        // To also handle the escapeKey (or any other keys/modifiers)
+        // DnDTargets will need to either use PSE::DragAndDropTargetHelper
+        // or register their own KeyListener with drag source.
+        // This follows the existing model also registering
+        // mouseListener with the source component, and as such,
+        // can be used in the same way.  Any prior focus order will
+        // be restored once this object is released.
+        // PSE
+        mouseDragSource->addKeyListener(this);
+        mouseDragSource->setWantsKeyboardFocus(true);
+        mouseDragSource->grabKeyboardFocus();
+        // PSE
+
         mouseDragSource->addMouseListener (this, false);
 
         startTimer (200);
@@ -69,6 +96,7 @@ public:
         if (mouseDragSource != nullptr)
         {
             mouseDragSource->removeMouseListener (this);
+            mouseDragSource->removeKeyListener(this); // PSE
 
             if (auto* current = getCurrentlyOver())
                 if (current->isInterestedInDragSource (sourceDetails))
@@ -92,7 +120,10 @@ public:
         if (e.originalComponent != this && isOriginalInputSource (e.source))
         {
             if (mouseDragSource != nullptr)
-                mouseDragSource->removeMouseListener (this);
+            {
+                mouseDragSource->removeMouseListener(this);
+                mouseDragSource->removeKeyListener(this); // PSE
+            }
 
             // (note: use a local copy of this in case the callback runs
             // a modal loop and deletes this object before the method completes)
@@ -176,6 +207,11 @@ public:
     {
         forceMouseCursorUpdate();
 
+        // PSE
+        if (isShowing() && !mouseDragSource->hasKeyboardFocus(false))
+            mouseDragSource->grabKeyboardFocus();
+        // PSE
+
         if (sourceDetails.sourceComponent == nullptr)
         {
             deleteSelf();
@@ -187,7 +223,10 @@ public:
                 if (isOriginalInputSource (s) && ! s.isDragging())
                 {
                     if (mouseDragSource != nullptr)
-                        mouseDragSource->removeMouseListener (this);
+                    {
+                        mouseDragSource->removeMouseListener(this);
+                        mouseDragSource->removeKeyListener(this); // PSE
+                    }
 
                     deleteSelf();
                     break;
@@ -196,11 +235,17 @@ public:
         }
     }
 
-    bool keyPressed (const KeyPress& key) override
+    // KeyListener
+    bool keyPressed (const KeyPress& key, Component* source) override
+    {
+        return keyPressed(key);
+    }
+
+    bool keyPressed(const KeyPress& key) override
     {
         if (key == KeyPress::escapeKey)
         {
-            dismissWithAnimation (true);
+            dismissWithAnimation(true);
             deleteSelf();
             return true;
         }
