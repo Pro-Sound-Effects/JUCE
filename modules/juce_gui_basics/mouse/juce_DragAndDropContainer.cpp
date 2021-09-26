@@ -78,7 +78,6 @@ public:
         // PSE
         mouseDragSource->addKeyListener(this);
         mouseDragSource->setWantsKeyboardFocus(true);
-        mouseDragSource->grabKeyboardFocus();
         // PSE
 
         mouseDragSource->addMouseListener (this, false);
@@ -86,7 +85,9 @@ public:
         startTimer (200);
 
         setInterceptsMouseClicks (false, false);
-        setAlwaysOnTop (true);
+        setAlwaysOnTop(true);
+        // should be visible before we grab focus...
+        mouseDragSource->grabKeyboardFocus(); // PSE
     }
 
     ~DragImageComponent() override
