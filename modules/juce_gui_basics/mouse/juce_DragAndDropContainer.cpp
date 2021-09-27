@@ -86,8 +86,11 @@ public:
 
         setInterceptsMouseClicks (false, false);
         setAlwaysOnTop(true);
+        // PSE
         // should be visible before we grab focus...
-        mouseDragSource->grabKeyboardFocus(); // PSE
+        mouseDragSource->setVisible(true);
+        mouseDragSource->grabKeyboardFocus();
+        // PSE
     }
 
     ~DragImageComponent() override
@@ -209,8 +212,12 @@ public:
         forceMouseCursorUpdate();
 
         // PSE
-        if (isShowing() && !mouseDragSource->hasKeyboardFocus(false))
-            mouseDragSource->grabKeyboardFocus();
+        if (mouseDragSource != nullptr)
+        {   
+            if (mouseDragSource->isShowing()
+                && !mouseDragSource->hasKeyboardFocus(false))
+                mouseDragSource->grabKeyboardFocus();
+        }
         // PSE
 
         if (sourceDetails.sourceComponent == nullptr)
