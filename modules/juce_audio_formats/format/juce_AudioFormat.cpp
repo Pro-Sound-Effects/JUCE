@@ -96,7 +96,12 @@ AudioFormatWriter* AudioFormat::createWriterFor (OutputStream* streamToWriteTo,
 // br: mod
 MemoryBlock AudioFormat::createBWAVBlockFrom (const StringPairArray& values)
 {
-    return WavFileHelpers::BWAVChunk::createFrom (values);
+    std::unordered_map<String, String> mapValues;
+    for (String key : values.getAllKeys())
+    {
+        mapValues[key] = values[key];
+    }
+    return WavFileHelpers::BWAVChunk::createFrom (mapValues);
 }
 
 MemoryBlock AudioFormat::createiXMLBlockFrom (const StringPairArray& values)
