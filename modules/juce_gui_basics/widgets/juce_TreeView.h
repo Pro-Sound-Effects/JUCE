@@ -918,6 +918,9 @@ public:
 private:
     friend class TreeViewItem;
 
+    // PSE (moved from def.)
+    enum class Async { yes, no };
+
     class ItemComponent;
     class ContentComponent;
     class TreeViewport;
@@ -928,7 +931,7 @@ private:
 
     std::unique_ptr<AccessibilityHandler> createAccessibilityHandler() override;
     void itemsChanged() noexcept;
-    void updateVisibleItems();
+    void updateVisibleItems(Async useAsyncUpdate = Async::yes);
     void updateButtonUnderMouse (const MouseEvent&);
     void showDragHighlight (const InsertPoint&) noexcept;
     void hideDragHighlight() noexcept;

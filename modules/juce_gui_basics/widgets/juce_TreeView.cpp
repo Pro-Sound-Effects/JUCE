@@ -697,7 +697,7 @@ public:
         return static_cast<ContentComponent*> (getViewedComponent());
     }
 
-    enum class Async { yes, no };
+    // PSE (moved Async decl. to header)
 
     void recalculatePositions (Async useAsyncUpdate)
     {
@@ -810,7 +810,7 @@ void TreeView::setRootItem (TreeViewItem* const newRootItem)
             rootItem->setOpen (true);
         }
 
-        viewport->recalculatePositions (TreeViewport::Async::no);
+        viewport->recalculatePositions (Async::no);
     }
 }
 
@@ -1051,7 +1051,8 @@ void TreeView::scrollToKeepItemVisible (TreeViewItem* item)
 {
     if (item != nullptr && item->ownerView == this)
     {
-        updateVisibleItems();
+        // PSE (made synchronous so that the updated positions are actually relevant below)
+        updateVisibleItems(Async::no);
 
         item = item->getDeepestOpenParentItem();
 
@@ -1168,9 +1169,10 @@ bool TreeView::keyPressed (const KeyPress& key)
     return false;
 }
 
-void TreeView::updateVisibleItems()
+// PSE (added optional syncronous)
+void TreeView::updateVisibleItems(Async useAsyncUpdate)
 {
-    viewport->recalculatePositions (TreeViewport::Async::yes);
+    viewport->recalculatePositions (useAsyncUpdate);
 }
 
 //==============================================================================
