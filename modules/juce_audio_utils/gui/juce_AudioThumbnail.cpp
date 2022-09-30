@@ -243,9 +243,13 @@ private:
 
             // PSE
             // if numSamplesFinished + numToDo > progressInSamples, then not all downloads
-            if ((numSamplesFinished + numToDo) > floor(lengthInSamples * fileStreamProgress.load()))
+            // dd: note: we need to give the fileProgress a full buffer head start, or the
+            // thumbnail could easily catch-up / overrun in the middle of a buffer.
+            auto fileProgress = floor(lengthInSamples * fileStreamProgress.load()) - numToDo;
+            if ((numSamplesFinished + numToDo) > fileProgress)
             {
-                return isFullyLoaded();
+                if (!((lengthInSamples - numSamplesFinished) < numToDo * 2))
+                    return isFullyLoaded();
             }
             //
             
