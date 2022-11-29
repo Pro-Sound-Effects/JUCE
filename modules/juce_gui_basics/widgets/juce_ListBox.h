@@ -193,7 +193,9 @@ public:
 
     /** Destructor. */
     ~ListBox() override;
-
+    
+    /* PSE addtion. Adds some padding to the left margin that is part of the scrolled area*/
+    void setLeftMargin (int newLeftMargin);
 
     //==============================================================================
     /** Changes the current data model to display. */
