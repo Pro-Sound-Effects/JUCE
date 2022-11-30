@@ -286,6 +286,12 @@ public:
 
         setViewedComponent (content.release());
     }
+    
+    // PSE addition. Adds some padding to the left margin that lies inside the scrolled area.
+    void setLeftMargin (int newLeftMargin)
+    {
+        leftMargin = newLeftMargin;
+    }
 
     RowComponent* getComponentForRow (int row) const noexcept
     {
@@ -379,16 +385,16 @@ public:
 
                 if (auto* rowComp = getComponentForRowWrapped (row))
                 {
-                    rowComp->setBounds (0, row * rowH, w, rowH);
+                    rowComp->setBounds (leftMargin, row * rowH, w, rowH);
                     rowComp->update (row, owner.isRowSelected (row));
                 }
             }
         }
 
         if (owner.headerComponent != nullptr)
-            owner.headerComponent->setBounds (owner.outlineThickness + content.getX(),
+            owner.headerComponent->setBounds (owner.outlineThickness + content.getX() + leftMargin,
                                               owner.outlineThickness,
-                                              jmax (owner.getWidth() - owner.outlineThickness * 2,
+                                              jmax (owner.getWidth() - owner.outlineThickness * 2 - leftMargin,
                                                     content.getWidth()),
                                               owner.headerComponent->getHeight());
     }
@@ -478,6 +484,7 @@ private:
     OwnedArray<RowComponent> rows;
     int firstIndex = 0, firstWholeIndex = 0, lastWholeIndex = 0;
     bool hasUpdated = false;
+    int leftMargin = 0; // PSE addition
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ListViewport)
 };
@@ -527,6 +534,11 @@ ListBox::~ListBox()
 {
     headerComponent.reset();
     viewport.reset();
+}
+
+void ListBox::setLeftMargin (int newLeftMargin)
+{
+    viewport->setLeftMargin (newLeftMargin);
 }
 
 void ListBox::setModel (ListBoxModel* const newModel)
