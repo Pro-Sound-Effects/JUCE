@@ -275,7 +275,7 @@ public:
 
     // ===== PSE
     virtual void readWithChunkStorage(bool thumbnailOnly = false) { /*jassertfalse;*/ } // either do something here or make it pure virtual!
-    virtual void setLengthInSamples(uint32 length) { lengthInSamples = length; }
+    virtual void setLengthInSamples(uint32 length) { /* lengthInSamples = length; */ }
     // ===== PSE
     
 protected:
