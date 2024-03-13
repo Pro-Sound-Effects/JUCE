@@ -249,7 +249,7 @@ private:
             if ((numSamplesFinished + numToDo) > fileProgress)
             {
                 if (!((lengthInSamples - numSamplesFinished) < numToDo * 2))
-                    return isFullyLoaded();
+                    return false; // isFullyLoaded();
             }
             //
             
