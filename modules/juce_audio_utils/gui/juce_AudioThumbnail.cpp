@@ -195,7 +195,14 @@ public:
 
     bool isFullyLoaded() const noexcept
     {
-        return numSamplesFinished >= lengthInSamples;
+        // PSE
+        // dd: the main issue here is that depending on the file type (.mp3 being biggest culprit),
+        // 'lengthInSamples' is not a reliable value until after the header has been read and parsed
+        // As a result, the timeslice thread used to render thumbs could intermittently assume the
+        // file has been fully loaded, and skip the thumb.
+        return lengthInSamples > 0 && (numSamplesFinished >= lengthInSamples);
+//        return numSamplesFinished >= lengthInSamples;
+        //
     }
 
     inline int sampleToThumbSample (const int64 originalSample) const noexcept
@@ -237,18 +244,21 @@ private:
     {
         jassert (reader != nullptr);
 
-        if (! isFullyLoaded())
+        if (!isFullyLoaded())
         {
-            auto numToDo = (int) jmin (256 * (int64) owner.samplesPerThumbSample, lengthInSamples - numSamplesFinished);
+            auto numToDo = (int) jmin (32 * (int64) owner.samplesPerThumbSample, lengthInSamples - numSamplesFinished);
 
             // PSE
-            // if numSamplesFinished + numToDo > progressInSamples, then not all downloads
-            // dd: note: we need to give the fileProgress a full buffer head start, or the
-            // thumbnail could easily catch-up / overrun in the middle of a buffer.
-            auto fileProgress = floor(lengthInSamples * fileStreamProgress.load()) - numToDo;
-            if ((numSamplesFinished + numToDo) > fileProgress)
+            auto fileProgress = fileStreamProgress.load();
+            auto sampleProgress = floor(lengthInSamples * fileProgress) - numToDo;
+            
+            // if numSamplesFinished + numToDo > progressInSamples, then we've overrun of the reader.
+            if ((numSamplesFinished + numToDo) > sampleProgress)
             {
                 if (!((lengthInSamples - numSamplesFinished) < numToDo * 2))
+                    return false; // isFullyLoaded();
+                numToDo = floor(lengthInSamples * fileProgress) - numSamplesFinished;
+                if (numToDo <= 0)
                     return false; // isFullyLoaded();
             }
             //
@@ -784,7 +794,10 @@ double AudioThumbnail::getTotalLength() const noexcept
 bool AudioThumbnail::isFullyLoaded() const noexcept
 {
     const ScopedLock sl (lock);
-    return numSamplesFinished >= totalSamples - samplesPerThumbSample;
+    // PSE
+    return totalSamples > 0 && (numSamplesFinished >= totalSamples - samplesPerThumbSample);
+//    return numSamplesFinished >= totalSamples - samplesPerThumbSample;
+    //
 }
 
 double AudioThumbnail::getProportionComplete() const noexcept
