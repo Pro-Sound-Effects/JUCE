@@ -310,6 +310,18 @@ public:
     */
     bool isCurrentlyScrollingOnDrag() const noexcept;
 
+    /** Sets the scrolling speed factor for mouse wheel and trackpad scrolling.
+        A value of 1.0 is the default speed, smaller values make scrolling slower,
+        and larger values make scrolling faster.
+        @param factor   the scrolling speed factor to use
+    */
+    void setScrollingSpeedFactor (float factor);
+
+    /** Returns the current scrolling speed factor.
+        @see setScrollingSpeedFactor
+    */
+    float getScrollingSpeedFactor() const noexcept;
+
     //==============================================================================
     /** @internal */
     void resized() override;
@@ -348,6 +360,12 @@ private:
     bool customScrollBarThickness = false;
     bool allowScrollingWithoutScrollbarV = false, allowScrollingWithoutScrollbarH = false;
     bool vScrollbarRight = true, hScrollbarBottom = true;
+
+    // Direction locking for scrolling
+    bool isScrollingVertically = false;
+    bool isScrollingHorizontally = false;
+    Time lastScrollTime;
+    float scrollingSpeedFactor = 1.0f;
 
     struct DragToScrollListener;
     std::unique_ptr<DragToScrollListener> dragToScrollListener;

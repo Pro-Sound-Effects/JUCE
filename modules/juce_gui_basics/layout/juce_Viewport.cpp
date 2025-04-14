@@ -151,7 +151,8 @@ struct Viewport::DragToScrollListener   : private MouseListener,
 //==============================================================================
 Viewport::Viewport (const String& name)
     : Component (name),
-      dragToScrollListener (std::make_unique<DragToScrollListener> (*this))
+      dragToScrollListener (std::make_unique<DragToScrollListener> (*this)),
+      lastScrollTime(Time::getCurrentTime())
 {
     // content holder is used to clip the contents so they don't overlap the scrollbars
     addAndMakeVisible (contentHolder);
@@ -327,6 +328,16 @@ void Viewport::setScrollOnDragMode (const ScrollOnDragMode mode)
 bool Viewport::isCurrentlyScrollingOnDrag() const noexcept
 {
     return dragToScrollListener->isDragging;
+}
+
+void Viewport::setScrollingSpeedFactor (float factor)
+{
+    scrollingSpeedFactor = factor;
+}
+
+float Viewport::getScrollingSpeedFactor() const noexcept
+{
+    return scrollingSpeedFactor;
 }
 
 //==============================================================================
@@ -540,10 +551,12 @@ static int rescaleMouseWheelDistance (float distance, int singleStepSize) noexce
     if (distance == 0.0f)
         return 0;
 
+    // Scale the distance by the step size
     distance *= 14.0f * (float) singleStepSize;
 
-    return roundToInt (distance < 0 ? jmin (distance, -1.0f)
-                                    : jmax (distance,  1.0f));
+    // Allow for smaller scroll amounts by not enforcing a minimum of 1 pixel
+    // This allows for very slow scrolling when needed
+    return roundToInt (distance);
 }
 
 bool Viewport::useMouseWheelMoveIfNeeded (const MouseEvent& e, const MouseWheelDetails& wheel)
@@ -555,8 +568,85 @@ bool Viewport::useMouseWheelMoveIfNeeded (const MouseEvent& e, const MouseWheelD
 
         if (canScrollHorz || canScrollVert)
         {
-            auto deltaX = rescaleMouseWheelDistance (wheel.deltaX, singleStepX);
-            auto deltaY = rescaleMouseWheelDistance (wheel.deltaY, singleStepY);
+            // Create a modified wheel event with direction locking
+            MouseWheelDetails modifiedWheel = wheel;
+
+            // Implement direction locking for trackpads
+            if (wheel.isSmooth)
+            {
+                Time currentTime = Time::getCurrentTime();
+
+                // Reset direction lock if it's been a while since the last scroll event
+                if (currentTime.toMilliseconds() - lastScrollTime.toMilliseconds() > 500)
+                {
+                    isScrollingVertically = false;
+                    isScrollingHorizontally = false;
+                }
+
+                // Determine the primary scroll direction if not already locked
+                if (!isScrollingVertically && !isScrollingHorizontally)
+                {
+                    // Make vertical scrolling extremely dominant
+                    // Almost any vertical component will lock to vertical scrolling
+                    if (std::abs(wheel.deltaY) > 0.005f &&
+                        (std::abs(wheel.deltaY) > std::abs(wheel.deltaX) * 0.8f || std::abs(wheel.deltaX) < 0.01f))
+                    {
+                        isScrollingVertically = true;
+                    }
+                    // Only lock to horizontal if it's an extremely clear horizontal gesture
+                    // with almost no vertical component
+                    else if (std::abs(wheel.deltaX) > 0.01f && std::abs(wheel.deltaX) > std::abs(wheel.deltaY) * 3.0f)
+                    {
+                        isScrollingHorizontally = true;
+                    }
+                    else if (std::abs(wheel.deltaY) <= 0.005f && std::abs(wheel.deltaX) <= 0.01f)
+                    {
+                        // Too small to start scrolling, ignore it
+                        return true; // Skip this event entirely
+                    }
+                }
+
+                // Apply direction locking
+                if (isScrollingVertically)
+                {
+                    // Lock to vertical scrolling only
+                    modifiedWheel.deltaX = 0.0f;
+
+                    // If there's a very strong horizontal component, consider breaking the vertical lock
+                    // This allows users to intentionally switch to horizontal scrolling if needed
+                    if (std::abs(wheel.deltaX) > 0.05f && std::abs(wheel.deltaX) > std::abs(wheel.deltaY) * 5.0f)
+                    {
+                        isScrollingVertically = false;
+                        isScrollingHorizontally = true;
+                        modifiedWheel.deltaY = 0.0f;
+                        modifiedWheel.deltaX = wheel.deltaX;
+                    }
+                }
+                else if (isScrollingHorizontally)
+                {
+                    // Lock to horizontal scrolling only
+                    modifiedWheel.deltaY = 0.0f;
+
+                    // Make it easier to break horizontal lock and switch to vertical
+                    if (std::abs(wheel.deltaY) > 0.02f && std::abs(wheel.deltaY) > std::abs(wheel.deltaX) * 1.5f)
+                    {
+                        isScrollingHorizontally = false;
+                        isScrollingVertically = true;
+                        modifiedWheel.deltaX = 0.0f;
+                        modifiedWheel.deltaY = wheel.deltaY;
+                    }
+                }
+
+                // Update the last scroll time
+                lastScrollTime = currentTime;
+            }
+
+            // Apply scrolling speed factor
+            modifiedWheel.deltaX *= scrollingSpeedFactor;
+            modifiedWheel.deltaY *= scrollingSpeedFactor;
+
+            auto deltaX = rescaleMouseWheelDistance (modifiedWheel.deltaX, singleStepX);
+            auto deltaY = rescaleMouseWheelDistance (modifiedWheel.deltaY, singleStepY);
 
             auto pos = getViewPosition();
 
